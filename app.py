@@ -59,7 +59,7 @@ def send():
 		# Population pattern
 		if search.startswith(patterns[0]):
 			answer_response = resultPopulation(search)
-			return render_template('result.html', len=len(answer_response), resultList = answer_response)
+			return render_template('result.html', len=len(answer_response), resultList = answer_response, flag = False)
 		# Person Born pattern
 		elif search.startswith(patterns[1]) and patterns[2] in search:
 			text = search
@@ -67,7 +67,10 @@ def send():
 			end = text.find(patterns[2], start)
 			text = text[start:end].strip()
 			answer_response = resultName(text)
-			return render_template('result.html', len=len(answer_response), resultList = answer_response)
+			# if multiple answers
+			if len(answer_response) > 1:
+				return render_template('result.html', len=len(answer_response), resultList = answer_response, flag = True)
+			return render_template('result.html', len=len(answer_response), resultList = answer_response, flag = False)
 		
 		
 	return render_template('index.html')
