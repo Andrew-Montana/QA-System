@@ -16,18 +16,24 @@ def resultName(name):
 	sparql.setQuery("""
 	    PREFIX dbo: <http://dbpedia.org/ontology/>
 	PREFIX foaf: <http://xmlns.com/foaf/0.1/>
-	select ?person ?birthDate
+	select ?person ?birthDate ?abstract
 	where {
 	  ?person foaf:name \""""+name+"""\"@en.
 	  ?person a foaf:Person.
-	  ?person dbo:birthDate ?birthDate
+	  ?person dbo:birthDate ?birthDate .
+	  ?person dbo:abstract ?abstract .
+	  FILTER (lang(?abstract) = 'en')
 	}""")
 	sparql.setReturnFormat(JSON)
 	results = sparql.query().convert()
 
 	resultList = list()
 	for result in results["results"]["bindings"]:
-		resultList.append(result["birthDate"]["value"])
+		resultList.append([
+			  result["person"]["value"],
+			  result["birthDate"]["value"],
+			  result["abstract"]["value"]
+			])
 	return resultList
 
 def resultPopulation(city):
@@ -48,7 +54,11 @@ def resultPopulation(city):
 
 	resultList = list()
 	for result in results["results"]["bindings"]:
-		resultList.append(result["numberOfInhabitants"]["value"])
+		resultList.append([
+			  result["numberOfInhabitants"]["value"],
+			  result["numberOfInhabitants"]["value"],
+			  result["numberOfInhabitants"]["value"]
+			])
 
 	return resultList
 
