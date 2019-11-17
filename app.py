@@ -1,6 +1,9 @@
 from flask import Flask, request, render_template
 from SPARQLWrapper import SPARQLWrapper, JSON
 import string
+import osmapi
+import overpy
+#import stanfordnlp
 
 app = Flask(__name__)
 patterns = list(["how many people live in the city named","when was","born"])
@@ -8,7 +11,7 @@ patterns = list(["how many people live in the city named","when was","born"])
 @app.route('/')
 
 def index():
-	return render_template("index.html")
+        return render_template("index.html")
 
 def resultName(name):
 	name = string.capwords(name)
@@ -62,8 +65,7 @@ def resultPopulation(city):
 
 	return resultList
 
-@app.route('/send', methods=['GET','POST'])
-def send():
+def send22():
 	if request.method == 'POST':
 		search = request.form['search'].lower()
 		# Population pattern
@@ -84,6 +86,36 @@ def send():
 		
 		
 	return render_template('index.html')
+
+@app.route('/send', methods=['GET','POST'])
+def send():
+	if request.method == 'POST':
+		text = request.form['search'].lower()
+		isValid = check_valid(text)
+		if isValid == True:
+			nltk()
+		#
+		answer = ("ANSWER is " + str(isValid))
+		return(answer)
+	return("no post")
+
+def check_valid(text):
+	# 1.1 (Show me <location> that are/is close to <location>.)
+	if (text.startswith("show me") and "that are close to" in text) or ((text.startswith("show me") and "that is close to" in text)):
+		return True;
+	# 1.2 (Show me <location>)
+	else if text.startswith("show me"):
+		return True;
+
+	# 2 (What is <address> of <place>?)
+	if (text.startswith("what is") and "of" in text):
+		return True;
+	# 3 Tell me the openning hours of <place>.
+	if text.startswith("tell me the openning hours of"):
+		return True;
+	# 4 I would like to <action> somewhere.
+	if text.startswith("i would like to"):
+		return True;
 
 
 if __name__ == "__main__":
