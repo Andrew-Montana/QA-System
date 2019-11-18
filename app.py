@@ -11,7 +11,17 @@ patterns = list(["how many people live in the city named","when was","born"])
 @app.route('/')
 
 def index():
-        return render_template("index.html")
+	api = overpy.Overpass()
+
+# fetch all ways and nodes
+	#result = api.query("""node [amenity=restaurant](11.904373,51.717910,12.036896,51.782950);out;""")
+	#result = api.query("""node [name=drinking_water](12.342453,41.784658,12.634964,41.996786);out;""")
+	#result = api.query("[out:json];node[amenity=restaurant](12.318420,41.763919,12.663116,42.025611);out;")
+	result = api.query("""[out:json];area[name = "New York"]; node(area)[amenity=restaurant]; out;""")
+	print(len(result.nodes))
+	print(len(result.ways))
+	print(result)
+	return render_template("index.html", result = result)
 
 def resultName(name):
 	name = string.capwords(name)
@@ -99,12 +109,12 @@ def send():
 		return(answer)
 	return("no post")
 
-def check_valid(text):
+#def check_valid(text):
 	# 1.1 (Show me <location> that are/is close to <location>.)
 	if (text.startswith("show me") and "that are close to" in text) or ((text.startswith("show me") and "that is close to" in text)):
 		return True;
 	# 1.2 (Show me <location>)
-	else if text.startswith("show me"):
+	elif text.startswith("show me"):
 		return True;
 
 	# 2 (What is <address> of <place>?)
