@@ -3,7 +3,8 @@ from SPARQLWrapper import SPARQLWrapper, JSON
 import string
 import osmapi
 import overpy
-#import stanfordnlp
+import nltk
+from nltk.corpus import treebank
 
 app = Flask(__name__)
 patterns = list(["how many people live in the city named","when was","born"])
@@ -11,17 +12,56 @@ patterns = list(["how many people live in the city named","when was","born"])
 @app.route('/')
 
 def index():
-	api = overpy.Overpass()
-
+	#api = overpy.Overpass()
+	#result = api.query("""[out:json];area[name = "Berlin"]; node(area)[amenity=restaurant]; out;""")
+	#api = overpy.Overpass()
 # fetch all ways and nodes
 	#result = api.query("""node [amenity=restaurant](11.904373,51.717910,12.036896,51.782950);out;""")
 	#result = api.query("""node [name=drinking_water](12.342453,41.784658,12.634964,41.996786);out;""")
 	#result = api.query("[out:json];node[amenity=restaurant](12.318420,41.763919,12.663116,42.025611);out;")
-	result = api.query("""[out:json];area[name = "New York"]; node(area)[amenity=restaurant]; out;""")
-	print(len(result.nodes))
-	print(len(result.ways))
-	print(result)
-	return render_template("index.html", result = result)
+	##result = api.query("""[out:json];area[name = "New York"]; node(area)[amenity=restaurant]; out;""")
+	#print(len(result.nodes))
+	#print(len(result.ways))
+	#print(result)
+	return render_template("index.html")#, result = result)
+
+def nltk_showme(text):
+	sentence = text
+	tokens = nltk.word_tokenize(sentence)
+	tags = nltk.pos_tag(tokens)
+	ent = nltk.chunk.ne_chunk(tags)
+
+	#
+	print(tokens)
+	print(tags)
+	print(ent)
+	kol = 0
+	nnpKol = 0
+	for i,j in tags:
+		if (j == "NN"):
+			kol = kol + 1
+		if (j == "NNS"):
+			kol += 1
+		if (j == "NNP"):
+			nnpKol += 1
+
+	if(kol == 0):
+		return "error"
+	if(nnpKol == 0):
+		return "error"
+
+	# if show me <location< in <city>
+	nltkList = dict()
+	for i,j in tags:
+		if(j == "NNP"):
+			nltkList["NNP"] = i#nltkList.append(i)
+		if(j == "NN"):
+			nltkList["NN"] = i#
+		if(j == "NNS"):
+			nltkList["NNS"] = i#
+	return nltkList
+
+#def nltk_whatIsAddress(text):
 
 def resultName(name):
 	name = string.capwords(name)
@@ -100,32 +140,55 @@ def send22():
 @app.route('/send', methods=['GET','POST'])
 def send():
 	if request.method == 'POST':
-		text = request.form['search'].lower()
+		text = request.form['search']
 		isValid = check_valid(text)
-		if isValid == True:
-			nltk()
-		#
-		answer = ("ANSWER is " + str(isValid))
-		return(answer)
+		if isValid[0] == True:
+			nltkResponse = ""
+			if(isValid[1] == 1):
+				nltkResponse = nltk_showme(text)
+			#elif(isValid[1] == 2):
+			#	nltkResponse = nltk_whatIsAddress(text)
+			#elif(isValid[1] == 3):
+			#	nltkResponse = nltk_showme(text)
+			#elif(isValid[1] == 4):
+			#	nltkResponse = nltk_showme(text)
+
+			print(nltkResponse)
+			api = overpy.Overpass()
+			query = f"""[out:json];area[name = "{nltkResponse["NNP"]}"]; node(area)[amenity={nltkResponse["NN"]}]; out;"""
+			print(query)
+			result = api.query(query)
+			if nltkResponse != "error":
+				return render_template("overpassResult.html", result = result ) 
+				#return render_template("nltkTest.html", nltkList = nltkResponse ) 
 	return("no post")
 
-#def check_valid(text):
+def check_valid(text):
 	# 1.1 (Show me <location> that are/is close to <location>.)
-	if (text.startswith("show me") and "that are close to" in text) or ((text.startswith("show me") and "that is close to" in text)):
-		return True;
-	# 1.2 (Show me <location>)
-	elif text.startswith("show me"):
-		return True;
+	#if (text.startswith("show me") and "that are close to" in text) or ((text.startswith("show me") and "that is close to" in text)):
+	#	return True;
+	# 1.2 (Show me <location> in <city>)
+	#elif
+	text = text.lower()
+
+	if text.startswith("show me"):
+		return list([True,1])
 
 	# 2 (What is <address> of <place>?)
 	if (text.startswith("what is") and "of" in text):
-		return True;
+		globalNltkIndex = 2
+		return list([True,2])
 	# 3 Tell me the openning hours of <place>.
-	if text.startswith("tell me the openning hours of"):
-		return True;
+	#if text.startswith("tell me the openning hours of"):
+	#	return True;
 	# 4 I would like to <action> somewhere.
 	if text.startswith("i would like to"):
-		return True;
+		globalNltkIndex = 3
+		return list([True,3])
+	# where is <city>
+	if text.startswith("where is"):
+		globalNltkIndex = 4
+		return list([True,4])
 
 
 if __name__ == "__main__":
