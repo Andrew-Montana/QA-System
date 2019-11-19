@@ -7,10 +7,8 @@ import nltk
 from nltk.corpus import treebank
 
 app = Flask(__name__)
-patterns = list(["how many people live in the city named","when was","born"])
 
 @app.route('/')
-
 def index():
 	#api = overpy.Overpass()
 	#result = api.query("""[out:json];area[name = "Berlin"]; node(area)[amenity=restaurant]; out;""")
@@ -25,16 +23,7 @@ def index():
 	#print(result)
 	return render_template("index.html")#, result = result)
 
-def nltk_showme(text):
-	sentence = text
-	tokens = nltk.word_tokenize(sentence)
-	tags = nltk.pos_tag(tokens)
-	ent = nltk.chunk.ne_chunk(tags)
-
-	#
-	print(tokens)
-	print(tags)
-	print(ent)
+def nltk_check(tags, isTwo):
 	kol = 0
 	nnpKol = 0
 	for i,j in tags:
@@ -44,98 +33,97 @@ def nltk_showme(text):
 			kol += 1
 		if (j == "NNP"):
 			nnpKol += 1
+	# if we work only with NNP
+	if isTwo == False:
+		if(nnpKol == 0):
+			return "error"
+	# if we work with nnp and nn/nns simultaniously
+	if isTwo == True:
+		if(kol == 0):
+			return "error"
+		if(nnpKol == 0):
+			return "error"
 
-	if(kol == 0):
-		return "error"
-	if(nnpKol == 0):
-		return "error"
+	return "ok"
 
-	# if show me <location< in <city>
+def nltk_dictMultiple(tags):
+	nltkList = dict()
+	tmpList = list()
+	for i,j in tags:
+		if j == "NNP":
+			tmpList.append(i)
+
+	nltkList["NNP"] = " ".join(tmpList)
+	return nltkList
+
+def nltk_dict(tags):
 	nltkList = dict()
 	for i,j in tags:
 		if(j == "NNP"):
-			nltkList["NNP"] = i#nltkList.append(i)
+			nltkList["NNP"] = i
 		if(j == "NN"):
-			nltkList["NN"] = i#
+			nltkList["NN"] = i
 		if(j == "NNS"):
-			nltkList["NNS"] = i#
+			nltkList["NNS"] = i
 	return nltkList
 
-#def nltk_whatIsAddress(text):
+def nltk_showme(text, isTwo):
+	# if show me <location< in <city>
+	sentence = text
+	tokens = nltk.word_tokenize(sentence)
+	tags = nltk.pos_tag(tokens)
+	ent = nltk.chunk.ne_chunk(tags)
 
-def resultName(name):
-	name = string.capwords(name)
-	sparql = SPARQLWrapper("http://dbpedia.org/sparql")
-	sparql.setQuery("""
-	    PREFIX dbo: <http://dbpedia.org/ontology/>
-	PREFIX foaf: <http://xmlns.com/foaf/0.1/>
-	select ?person ?birthDate ?abstract
-	where {
-	  ?person foaf:name \""""+name+"""\"@en.
-	  ?person a foaf:Person.
-	  ?person dbo:birthDate ?birthDate .
-	  ?person dbo:abstract ?abstract .
-	  FILTER (lang(?abstract) = 'en')
-	}""")
-	sparql.setReturnFormat(JSON)
-	results = sparql.query().convert()
+	checkResponse = nltk_check(tags, isTwo)
+	if(checkResponse == "error"):
+		return "error"
 
-	resultList = list()
-	for result in results["results"]["bindings"]:
-		resultList.append([
-			  result["person"]["value"],
-			  result["birthDate"]["value"],
-			  result["abstract"]["value"]
-			])
-	return resultList
+	nltkList = nltk_dict(tags)
+	return nltkList
 
-def resultPopulation(city):
-	city = string.capwords((city.replace(patterns[0],"")).strip())
-	sparql = SPARQLWrapper("http://dbpedia.org/sparql")
-	sparql.setQuery("""
-    PREFIX db: <http://dbpedia.org/>
-	PREFIX dbp: <http://dbpedia.org/property/>
-	PREFIX rdf: <http://www.w3.org/1999/02/22-rdf-syntax-ns#> 
-	PREFIX rdfs: <http://www.w3.org/2000/01/rdf-schema#> 
-	PREFIX dbo: <http://dbpedia.org/ontology/> 
-	PREFIX dbr: <http://dbpedia.org/resource/> 
-    SELECT * 
-	WHERE { ?s rdfs:label \""""+city+"""\" @en . 
-	  ?s dbo:populationTotal ?numberOfInhabitants . }""")
-	sparql.setReturnFormat(JSON)
-	results = sparql.query().convert()
+def nltk_whatIsAddress(text, isTwo):
+	# (What is address(NN) of <amenity>?) // extend later with nnps and nns. Could be multiple NNPs because of its one name
+	# Caffe Bene, Bobamosa, Bouchon Backery,
+	sentence = text
+	tokens = nltk.word_tokenize(sentence)
+	tags = nltk.pos_tag(tokens)
+	ent = nltk.chunk.ne_chunk(tags)
+	# remove address as NN
+	for i in tags:
+		for j in range(0,2):
+			if(i[j].lower() == "address"):
+				tags.remove(i)
+    #
+	checkResponse = nltk_check(tags, isTwo)
+	if(checkResponse == "error"):
+		return "error"
 
-	resultList = list()
-	for result in results["results"]["bindings"]:
-		resultList.append([
-			  result["numberOfInhabitants"]["value"],
-			  result["numberOfInhabitants"]["value"],
-			  result["numberOfInhabitants"]["value"]
-			])
-
-	return resultList
-
-def send22():
-	if request.method == 'POST':
-		search = request.form['search'].lower()
-		# Population pattern
-		if search.startswith(patterns[0]):
-			answer_response = resultPopulation(search)
-			return render_template('result.html', len=len(answer_response), resultList = answer_response, flag = False)
-		# Person Born pattern
-		elif search.startswith(patterns[1]) and patterns[2] in search:
-			text = search
-			start = text.find(patterns[1]) + len(patterns[1])
-			end = text.find(patterns[2], start)
-			text = text[start:end].strip()
-			answer_response = resultName(text)
-			# if multiple answers
-			if len(answer_response) > 1:
-				return render_template('result.html', len=len(answer_response), resultList = answer_response, flag = True)
-			return render_template('result.html', len=len(answer_response), resultList = answer_response, flag = False)
+	# because of possible NNPs we use another function. In future need to improve this implementation
+	nltkList = nltk_dictMultiple(tags)
 		
-		
-	return render_template('index.html')
+	return nltkList
+
+def actionSomewhere(text):
+	#I would like to <action>(check from amenity) somewhere. Extend later, maybe use wants to eat and sleep somewhere.
+	#actionList = list(["eat","watch","dance","sleep","drink","relax"])
+
+	# Make better later, like loop available actions and retrieve amenities from somekinda list array etc
+	#for item in actionList:
+	#	if item in text:
+	amenity = ""
+	if "eat" in text:
+		amenity = "restaurant"
+	if "watch" in text:
+		amenity = "cinema"
+	if "dance" in text:
+		amenity = "nightclub"
+	if "drink" in text:
+		amenity = "drinking_water"
+	if "relax" in text:
+		amenity = "cinema"
+
+
+
 
 @app.route('/send', methods=['GET','POST'])
 def send():
@@ -143,23 +131,29 @@ def send():
 		text = request.form['search']
 		isValid = check_valid(text)
 		if isValid[0] == True:
+			api = overpy.Overpass()
 			nltkResponse = ""
+			query = ""
+			questionIndex = 0
 			if(isValid[1] == 1):
-				nltkResponse = nltk_showme(text)
-			#elif(isValid[1] == 2):
-			#	nltkResponse = nltk_whatIsAddress(text)
-			#elif(isValid[1] == 3):
-			#	nltkResponse = nltk_showme(text)
+				nltkResponse = nltk_showme(text, True)
+				questionIndex = 1
+				query = f"""[out:json];area[name = "{nltkResponse["NNP"]}"]; node(area)[amenity={nltkResponse["NN"]}]; out;"""
+			elif(isValid[1] == 2):
+				nltkResponse = nltk_whatIsAddress(text, False)
+				questionIndex = 2
+				query = f"""[out:json];area[name = "New York"]; node(area)[name="{nltkResponse["NNP"]}"]; out;"""
+			elif(isValid[1] == 3):
+				nltkResponse = actionSomewhere(text)
 			#elif(isValid[1] == 4):
 			#	nltkResponse = nltk_showme(text)
 
 			print(nltkResponse)
-			api = overpy.Overpass()
-			query = f"""[out:json];area[name = "{nltkResponse["NNP"]}"]; node(area)[amenity={nltkResponse["NN"]}]; out;"""
-			print(query)
-			result = api.query(query)
+			
+			if len(query) != 0:
+				result = api.query(query)
 			if nltkResponse != "error":
-				return render_template("overpassResult.html", result = result ) 
+				return render_template("overpassResult.html", result = result, questionIndex = questionIndex ) 
 				#return render_template("nltkTest.html", nltkList = nltkResponse ) 
 	return("no post")
 
@@ -174,20 +168,17 @@ def check_valid(text):
 	if text.startswith("show me"):
 		return list([True,1])
 
-	# 2 (What is <address> of <place>?)
-	if (text.startswith("what is") and "of" in text):
-		globalNltkIndex = 2
+	# 2 (What is address(NN) of <place>(NN - now is this)(NN,NNP)?)
+	if (text.startswith("what is address of")):
 		return list([True,2])
 	# 3 Tell me the openning hours of <place>.
 	#if text.startswith("tell me the openning hours of"):
 	#	return True;
 	# 4 I would like to <action> somewhere.
 	if text.startswith("i would like to"):
-		globalNltkIndex = 3
 		return list([True,3])
 	# where is <city>
 	if text.startswith("where is"):
-		globalNltkIndex = 4
 		return list([True,4])
 
 
