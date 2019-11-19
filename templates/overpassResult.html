@@ -25,6 +25,26 @@
            <p>{{result.nodes[0].tags["addr:street"]}} {{result.nodes[0].tags["addr:housenumber"]}}</p>
            {% elif questionIndex == 3: %}
            <p>{{result.nodes}}</p>
+           {% elif questionIndex == 4: %}
+              {%if resultLen > 1:%}
+              <ul class="list-group">
+              <p style="color:red">Which country do you want?</p>
+              {%for i in range(0, resultLen)%} 
+                <li class="list-group-item">
+                <button onclick="display('{{result.nodes[i]}}')" type="button" class="btn btn-info">Choose</button>
+                <p>
+                 <a href="https://www.wikidata.org/wiki/{{result.nodes[i].tags['wikidata']}}">https://www.wikidata.org/wiki/{{result.nodes[i].tags['wikidata']}}</a> 
+                </p>
+              </li>
+              {%endfor%}
+            </ul>
+              {%elif resultLen == 1:%}
+              <p>{{result.nodes}}</p>
+              {%else:%}
+              <p style="color:red">No results! Please, try something else</p>
+              {%endif%}
+            {% elif questionIndex == 5: %}
+           <p>{{resultLen}} results</p>
           {% endif %}
       </div>
   </body>

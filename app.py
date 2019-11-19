@@ -5,6 +5,7 @@ import osmapi
 import overpy
 import nltk
 from nltk.corpus import treebank
+from nltk.stem import WordNetLemmatizer 
 
 app = Flask(__name__)
 
@@ -21,7 +22,7 @@ def index():
 	#print(len(result.nodes))
 	#print(len(result.ways))
 	#print(result)
-	return render_template("index.html")#, result = result)
+	return render_template("index.html", message = "")#, result = result)
 
 def nltk_check(tags, isTwo):
 	kol = 0
@@ -124,6 +125,34 @@ def actionSomewhere(text):
 
 	return amenity
 
+def nltk_whereiscity(text, isTwo):
+	sentence = text
+	tokens = nltk.word_tokenize(sentence)
+	tags = nltk.pos_tag(tokens)
+	ent = nltk.chunk.ne_chunk(tags)
+	#
+	checkResponse = nltk_check(tags, isTwo)
+	if(checkResponse == "error"):
+		return "error"
+
+	#
+	nltkList = nltk_dict(tags)
+	return nltkList
+
+def nltk_howmanyams(text, isTwo):
+	# how many <amenity> in <city>
+	sentence = text
+	tokens = nltk.word_tokenize(sentence)
+	tags = nltk.pos_tag(tokens)
+	ent = nltk.chunk.ne_chunk(tags)
+
+	checkResponse = nltk_check(tags, isTwo)
+	if(checkResponse == "error"):
+		return "error"
+
+	nltkList = nltk_dict(tags)
+	return nltkList
+
 @app.route('/send', methods=['GET','POST'])
 def send():
 	if request.method == 'POST':
@@ -147,16 +176,24 @@ def send():
 				questionIndex = 3
 				if nltkResponse != "error":
 					query = f"""[out:json];area[name = "New York"]; node(area)[amenity="{nltkResponse["NN"]}"]; out;"""
-			#elif(isValid[1] == 4):
-			#	nltkResponse = nltk_showme(text)
-
+			elif(isValid[1] == 4):
+				nltkResponse = nltk_whereiscity(text, False)
+				questionIndex = 4
+				query = f"""[out:json];(node["place"="city"]["name"="{nltkResponse["NNP"]}"];);out body;>;out skel qt;"""
+			elif(isValid[1] == 5):
+				nltkResponse = nltk_howmanyams(text, True)
+				questionIndex = 5
+				lemmatizer = WordNetLemmatizer()
+				query = f"""[out:json];area[name = "{nltkResponse["NNP"]}"]; node(area)[amenity={lemmatizer.lemmatize(nltkResponse["NNS"])}]; out;"""
 			print(nltkResponse)
 			
 			if len(query) != 0:
 				result = api.query(query)
 			if nltkResponse != "error":
-				return render_template("overpassResult.html", result = result, questionIndex = questionIndex ) 
+				return render_template("overpassResult.html", result = result, questionIndex = questionIndex, resultLen = len(result.nodes) ) 
 				#return render_template("nltkTest.html", nltkList = nltkResponse ) 
+		else:
+			return render_template("index.html", message = "Try to ask something else") 
 	return("no post")
 
 def check_valid(text):
@@ -182,6 +219,9 @@ def check_valid(text):
 	# where is <city>
 	if text.startswith("where is"):
 		return list([True,4])
+	# how many <amenity> in <city>	
+	if text.startswith("how many"):
+		return list([True,5])
 
 	return list([False,0])
 

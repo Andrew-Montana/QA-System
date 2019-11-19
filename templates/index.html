@@ -17,6 +17,9 @@
 
 <div class="container-fluid">
 	<div class="row">
+		{%if message != "":%}
+	<h3 style="color: red">{{message}}</h3>
+	{%endif%}
 		<div class="col-md-12">
 			<nav class="navbar navbar-light bg-light">
 			  <form class="form-inline" method="post" action="/send">
