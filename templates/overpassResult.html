@@ -23,6 +23,8 @@
            <p>{{result.nodes}}</p>
            {% elif questionIndex == 2: %}
            <p>{{result.nodes[0].tags["addr:street"]}} {{result.nodes[0].tags["addr:housenumber"]}}</p>
+           {% elif questionIndex == 3: %}
+           <p>{{result.nodes}}</p>
           {% endif %}
       </div>
   </body>

@@ -110,20 +110,19 @@ def actionSomewhere(text):
 	# Make better later, like loop available actions and retrieve amenities from somekinda list array etc
 	#for item in actionList:
 	#	if item in text:
-	amenity = ""
+	amenity = dict()
 	if "eat" in text:
-		amenity = "restaurant"
+		amenity["NN"] = "restaurant"
 	if "watch" in text:
-		amenity = "cinema"
+		amenity["NN"] = "cinema"
 	if "dance" in text:
-		amenity = "nightclub"
+		amenity["NN"] = "nightclub"
 	if "drink" in text:
-		amenity = "drinking_water"
+		amenity["NN"] = "drinking_water"
 	if "relax" in text:
-		amenity = "cinema"
+		amenity["NN"] = "cinema"
 
-
-
+	return amenity
 
 @app.route('/send', methods=['GET','POST'])
 def send():
@@ -145,6 +144,9 @@ def send():
 				query = f"""[out:json];area[name = "New York"]; node(area)[name="{nltkResponse["NNP"]}"]; out;"""
 			elif(isValid[1] == 3):
 				nltkResponse = actionSomewhere(text)
+				questionIndex = 3
+				if nltkResponse != "error":
+					query = f"""[out:json];area[name = "New York"]; node(area)[amenity="{nltkResponse["NN"]}"]; out;"""
 			#elif(isValid[1] == 4):
 			#	nltkResponse = nltk_showme(text)
 
@@ -175,11 +177,13 @@ def check_valid(text):
 	#if text.startswith("tell me the openning hours of"):
 	#	return True;
 	# 4 I would like to <action> somewhere.
-	if text.startswith("i would like to"):
+	if text.startswith("i would like to") and text.endswith("somewhere"):
 		return list([True,3])
 	# where is <city>
 	if text.startswith("where is"):
 		return list([True,4])
+
+	return list([False,0])
 
 
 if __name__ == "__main__":
