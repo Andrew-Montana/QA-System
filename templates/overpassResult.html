@@ -28,7 +28,7 @@
            {% elif questionIndex == 4: %}
               {%if resultLen > 1:%}
               <ul class="list-group">
-              <p style="color:red">Which country do you want?</p>
+              <p style="color:red">Which city do you want?</p>
               {%for i in range(0, resultLen)%} 
                 <li class="list-group-item">
                 <button onclick="display('{{result.nodes[i]}}')" type="button" class="btn btn-info">Choose</button>
