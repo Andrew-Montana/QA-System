@@ -2,9 +2,12 @@ from flask import Flask, request, render_template
 from SPARQLWrapper import SPARQLWrapper, JSON
 import string
 import osmapi
-import overpy
-from ValidationModule import ValidationModule
-from NltkModule import NltkModule
+from PatternIdentifier import PatternIdentifier
+from ConceptIdentifier import ConceptIdentifier
+from QueryBuilder import QueryBuilder
+from QueryExecutor import QueryExecutor
+from EntitiesIdentifier import EntitiesIdentifier
+
 app = Flask(__name__)
 
 @app.route('/')
@@ -15,27 +18,35 @@ def index():
 @app.route('/send', methods=['GET','POST'])
 def send():
 	if request.method == 'POST':
-		text = request.form['search']
+		text = request.form['search'] # text
 
-		validInstance = ValidationModule()
-		validResponse = validInstance.check_valid(text)
-		isValid = True if validResponse != 0 else False 	# a if condition else b - syntax
+	patternIdC = PatternIdentifier(text) # 1 Component
+	conceptIdC = ConceptIdentifier(text) # 2 Component
+	entityIdC = EntitiesIdentifier(text) # 3 Component
 
-		if isValid == True:
-			api = overpy.Overpass()
-			nltkInstance = NltkModule(text)
-			nltkResponse = nltkInstance.GetResponse(validResponse)
-			
-			result = ""
-			if nltkResponse != "error":
-				result = api.query(nltkResponse)
-				return render_template("overpassResult.html", result = result, questionIndex = validResponse, resultLen = len(result.nodes) ) 
-				#return render_template("nltkTest.html", nltkList = nltkResponse ) 
-			else:
-				return("error")
-		else:
-			return render_template("index.html", message = "Try to ask something else") 
-	return("no post")
+	questionIndex = patternIdC.GetPattern()
+	concepts = conceptIdC.GetConcept()
+	entities = entityIdC.GetEntity()
+	print("question index: " + str(questionIndex))
+	print("concepts: " + str(concepts))
+	print("concepts: " + str(entities))
+	print("entity: " + str(entities[0]))
+	# 4 Component. Query Builder
+	queryBuilderC = QueryBuilder(questionIndex,concepts,entities)
+	query = queryBuilderC.GetQuery()
+
+	#
+	print("1 component: " + str(questionIndex))
+	print("2 component: " + str(concepts))
+	print("3 component: " + str(entities))
+	print("4 component: " + str(query))
+	# 5 Component. Query Executor
+	queryExecutorC = QueryExecutor(query) 
+	response = queryExecutorC.ExecuteQuery()
+
+	#
+	return render_template("overpassResult.html", result = response, questionIndex = questionIndex, resultLen = len(response.nodes) ) 
+
 
 
 if __name__ == "__main__":

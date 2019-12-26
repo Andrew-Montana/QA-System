@@ -12,26 +12,45 @@
 
    <link rel="stylesheet" href="https://stackpath.bootstrapcdn.com/bootstrap/4.3.1/css/bootstrap.min.css" integrity="sha384-ggOyR0iXCbMQv3Xipma34MD+dH/1fQ784/j6cY/iJTQUOhcWr7x9JvoRxT2MZw1T" crossorigin="anonymous">
 
+  <!-- leaflet -->
+      <link rel="stylesheet" href="https://unpkg.com/leaflet@1.6.0/dist/leaflet.css"
+   integrity="sha512-xwE/Az9zrjBIphAcBb3F6JVqxf46+CDLwfLMHloNu6KEQCAWi6HcDUbeOfBIptF7tcCzusKFjFw2yuvEpDL9wQ=="
+   crossorigin=""/>
+   <!-- Make sure you put this AFTER Leaflet's CSS -->
+ <script src="https://unpkg.com/leaflet@1.6.0/dist/leaflet.js"
+   integrity="sha512-gZwIG9x3wUXg2hdXF6+rVkLF/0Vi9U8D2Ntg4Ga5I5BZpVkVxlJWbSQtXPSiUTtC0TjtGOmxa1AJPuV0CPthew=="
+   crossorigin=""></script>
+
+
   </head>
-<style>
-</style>
+
+   <style>
+    #mapid{
+      height: 512px;
+    }
+   </style>
 
   <body>
     <div class="container">
+      <div>
            <h3>response:</h3>
+           <!-- 1 -->
            {% if questionIndex == 1: %}
-           <p>{{result.nodes}}</p>
+           <p>X:</p>
+           <!-- 2 -->
            {% elif questionIndex == 2: %}
            <p>{{result.nodes[0].tags["addr:street"]}} {{result.nodes[0].tags["addr:housenumber"]}}</p>
+           <!-- 3 -->
            {% elif questionIndex == 3: %}
-           <p>{{result.nodes}}</p>
+           <p>X:</p>
+           <!-- 4 -->
            {% elif questionIndex == 4: %}
               {%if resultLen > 1:%}
               <ul class="list-group">
               <p style="color:red">Which city do you want?</p>
               {%for i in range(0, resultLen)%} 
                 <li class="list-group-item">
-                <button onclick="display('{{result.nodes[i]}}')" type="button" class="btn btn-info">Choose</button>
+                <button onclick="display({{result.nodes[i].lat}},{{result.nodes[i].lon}})" type="button" class="btn btn-info">Choose</button>
                 <p>
                  <a href="https://www.wikidata.org/wiki/{{result.nodes[i].tags['wikidata']}}">https://www.wikidata.org/wiki/{{result.nodes[i].tags['wikidata']}}</a> 
                 </p>
@@ -39,20 +58,49 @@
               {%endfor%}
             </ul>
               {%elif resultLen == 1:%}
-              <p>{{result.nodes}}</p>
+              <p>x:</p>
               {%else:%}
               <p style="color:red">No results! Please, try something else</p>
               {%endif%}
+              <!-- 5 -->
             {% elif questionIndex == 5: %}
            <p>{{resultLen}} results</p>
           {% endif %}
+        </div>
+            <div id="mapid"></div>
       </div>
+
   </body>
 
   <script type="text/javascript">
-    function display(jsanswer) {
-  alert(jsanswer);
+
+ // Leaflet
+    var lat = "{{result.nodes[0].lat}}";
+    var lon = "{{result.nodes[0].lon}}";
+    var mymap = L.map('mapid').setView([lat, lon], 15);
+   //var mymap = L.map('mapid').setView([51.505, -0.09], 13);
+      {%if resultLen > 1:%}
+   {%for i in range(0, resultLen)%} 
+   var myMarker = L.marker(["{{result.nodes[i].lat}}", "{{result.nodes[i].lon}}"]).addTo(mymap);
+   myMarker.bindPopup("{{result.nodes[i].tags}}");
+    {%endfor%}
+   {%else:%}
+   var myMarker = L.marker([lat, lon]).addTo(mymap);
+   myMarker.bindPopup('{{result.nodes[0].tags}}');
+   {%endif%}
+
+    L.tileLayer('https://api.mapbox.com/styles/v1/{id}/tiles/{z}/{x}/{y}?access_token={accessToken}', {
+    attribution: 'Map data &copy; <a href="https://www.openstreetmap.org/">OpenStreetMap</a> contributors, <a href="https://creativecommons.org/licenses/by-sa/2.0/">CC-BY-SA</a>, Imagery © <a href="https://www.mapbox.com/">Mapbox</a>',
+    maxZoom: 15,
+    id: 'mapbox/streets-v11',
+    accessToken: 'pk.eyJ1IjoiYW5kcmV3bW9udGFuYSIsImEiOiJjazQ3ZGFodWYwcmFnM2ZsZnN6anIxZXgzIn0.0RcgjxDRvKsWOH7pkFwa1w'
+}).addTo(mymap);
+
+    function display(_lat, _lon) {
+      // set our view 
+      mymap.panTo(new L.LatLng(_lat,_lon));
 }
+
   </script>>
 
 
