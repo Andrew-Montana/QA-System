@@ -17,26 +17,58 @@ namespace parseMF
 
         static void Main(string[] args)
         {
-            UseAdvancedParser();
-            Console.ForegroundColor = ConsoleColor.Green;
-            Console.WriteLine("Done!");
+             //UseAdvancedParser();
+            // MyConsole.Print("Done!", ConsoleColor.Green);
+            //ChangeData();
             Console.ReadLine();
         }
 
-        public static void UsePackage(string html)
+        private static void ChangeData()
         {
-            var doc = new HtmlDocument();
-            doc.LoadHtml(html);
+            List<string> listA = new List<string>();
+            List<string> listB = new List<string>();
 
-            var query = from table in doc.DocumentNode.SelectNodes("//table").Cast<HtmlNode>()
-                        from row in table.SelectNodes("tr").Cast<HtmlNode>()
-                        from cell in row.SelectNodes("th|td").Cast<HtmlNode>()
-                        select new { Table = table.Id, CellText = cell.InnerText };
-
-            foreach (var cell in query)
+            MyConsole.Print("Changing data...");
+            // Read main data file
+            using (var reader = new StreamReader(@"C:\Users\Ghost\Desktop\data\all_data\data.csv"))
             {
-                Console.WriteLine("{0}: {1}", cell.Table, cell.CellText);
+                while (!reader.EndOfStream)
+                {
+                    var line = reader.ReadLine();
+                    if(!string.IsNullOrEmpty(line))
+                    {
+                        var values = line.Split(";;;");
+
+                        // make spaces
+                        if(values[1].Contains('_') || values[1].Contains('-'))
+                        {
+                            values[1] = values[1].Contains('_') == true ? values[1].Replace('_', ' ') : values[1];
+                            values[1] = values[1].Contains('-') == true ? values[1].Replace('-', ' ') : values[1];
+                            MyConsole.Print("-/_ have been changed", ConsoleColor.DarkYellow);
+                        }
+                        // get rid of 'yes' strings
+                        if (values[1] != "yes")
+                        {
+                            listA.Add(values[0]);
+                            listB.Add(values[1]);
+                        }
+                        else
+                        {
+                            MyConsole.Print("'yes' string are deleted", ConsoleColor.DarkYellow);
+                        }
+                    }
+                }
             }
+            // make new file
+            MyConsole.Print("File created!",ConsoleColor.Green);
+            StreamWriter writer = new StreamWriter(@"C:\Users\Ghost\Desktop\data\all_data\newData.csv");
+            for (int i = 0; i < listA.Count; i++)
+            {
+                writer.WriteLine(listA[i].ToString() + ";" + listB[i].ToString() + ";");
+            }
+            writer.Close();
+            Console.ReadLine();
+          
         }
 
         public static void UseAdvancedParser()
@@ -238,7 +270,7 @@ namespace parseMF
                     counter = 0;
                 }
                 if(keys.Count > 0)
-                    mainList.Add(new Data() { keys = keys, values = values, info = info, titles = titles});
+                    mainList.Add(new Data() { keys = keys, values = values, titles = titles}); // info = info, 
 
             }
             // delete existing files in folder before writing new
@@ -249,6 +281,7 @@ namespace parseMF
                 File.Delete(files[i]);
             }
             // create files:
+            string allIn = "";
             for (int i = 0; i < mainList.Count; i++) 
             {
                 if(mainList[i].keys.Count != 0)
@@ -256,90 +289,31 @@ namespace parseMF
                     string s = "";
                     for (int j = 0; j < mainList[i].keys.Count; j++)
                     {
-                            s += mainList[i].keys[j].Trim() + ";;;\t" + mainList[i].values[j].Trim() + ";;;\t" + mainList[i].info[j].ToString().Trim() + ";;;\n";
+                        // s += mainList[i].keys[j].Trim() + ";;;\t" + mainList[i].values[j].Trim() + ";;;\t" + mainList[i].info[j].ToString().Trim() + ";;;\n";
+                        s += mainList[i].keys[j].Trim() + ";;;" + mainList[i].values[j].Trim() + ";;;\n";
                     }
 
                     using (StreamWriter sw = new StreamWriter(@"C:\Users\Ghost\Desktop\data\" + mainList[i].keys[0].ToString().Trim() + ".csv", append: true))
                     {
                         sw.Write(s);
                     }
+                    allIn += s + "\n";
                 }
             }
-            // Console.WriteLine(mainList.Count);
+            if(!Directory.Exists(@"C:\Users\Ghost\Desktop\data\all_data\"))
+            {
+                Directory.CreateDirectory(@"C:\Users\Ghost\Desktop\data\all_data\");
+            }
+            StreamWriter streamWriter = new StreamWriter(@"C:\Users\Ghost\Desktop\data\all_data\data.csv");
+            streamWriter.Write(allIn);
+            streamWriter.Close();
 
         }
-
-    /*    public static void UseSingleParser()
-        {
-            HtmlDocument doc = new HtmlDocument();
-            doc.LoadHtml(GetTable1());
-            var tableNode = doc.DocumentNode.SelectSingleNode("//table[1]");
-
-            var titles = tableNode.Descendants("th")
-                                .Select(th => th.InnerText)
-                                .ToList();
-
-            var table = tableNode.Descendants("tr").Skip(1)
-                                .Select(tr => tr.Descendants("td")
-                                                .Select(td => td.InnerText)
-                                                .ToList())
-                                .ToList();
-            int counter = 0;
-            List<string> keys = new List<string>();
-            List<string> values = new List<string>();
-            List<string> info = new List<string>();
-            //enumerate all lists in the outer list
-            foreach (var list in table)
-            {
-                //enumerate the inner list
-                foreach (var item in list)
-                {
-                    //output the actual item
-                    if (!String.IsNullOrWhiteSpace(item))
-                    {
-                        if (counter == 0)
-                            keys.Add(item);
-                        if (counter == 1)
-                            values.Add(item);
-                        if (counter == 2)
-                            info.Add(item);
-
-                        counter++;
-
-                        if (counter > 2)
-                            counter = 0;
-                    }
-                }
-            }
-            //
-            Console.WriteLine("##Keys##");
-            Console.WriteLine(keys.Count);
-            foreach (var key in keys)
-            {
-                Console.WriteLine(key);
-            }
-            Console.WriteLine("##Values##");
-            Console.WriteLine(values.Count);
-            foreach (var value in values)
-            {
-                Console.WriteLine(value);
-            }
-        }*/
 
         public static string GetCode()
         {
             string sourcecode = "";
             using (StreamReader sr = new StreamReader(@"c:\Users\Ghost\Desktop\mapfeatures.html"))
-            {
-                sourcecode = sr.ReadToEnd();
-            }
-            return sourcecode;
-        }
-
-        public static string GetTable1()
-        {
-            string sourcecode = "";
-            using (StreamReader sr = new StreamReader(@"d://code_table1.txt"))
             {
                 sourcecode = sr.ReadToEnd();
             }
