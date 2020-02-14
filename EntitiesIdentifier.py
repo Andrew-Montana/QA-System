@@ -14,7 +14,7 @@ class EntitiesIdentifier:
 		doc = self.__nlp(self.__sentense)
 		for ent in doc.ents:
 			if ent.text not in self.__GetExcessLabels():
-				self.__entity.append((ent.text,ent.label_))
+				self.__entity.append([ent.label_,ent.text])
 		if len(self.__entity) == 0:
 			self.__entity = None
 
