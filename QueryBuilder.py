@@ -5,11 +5,9 @@ class QueryBuilder:
 		self.__entities = entities
 		self.__concepts = concepts
 
-		self.__conceptClass = (self.__concepts[0])[0]
-		self.__conceptValue = (self.__concepts[0])[1]
-		self.__conceptInfo = (self.__concepts[0])[2]
-
-		self.__entityText = (self.__entities[0])[0]
+		self.__conceptClass = (self.__concepts[0])[0] if self.__concepts != None else None
+		self.__conceptValue = (self.__concepts[0])[1] if self.__concepts != None else None
+		self.__entityText = (self.__entities[0])[0] if self.__entities != None else None
 
 	def GetQuery(self):
 		index = self.__questionIndex
@@ -32,6 +30,7 @@ class QueryBuilder:
 	def __showme(self):
 		# show me <location> in <city>
 		query = f"""[out:json];area[name = "{self.__entityText}"]; node(area)[{self.__conceptClass}={self.__conceptValue}]; out;"""
+		print(query)
 		return query
 
 	# 2

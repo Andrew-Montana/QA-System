@@ -24,29 +24,32 @@ def send():
 	conceptIdC = ConceptIdentifier(text) # 2 Component
 	entityIdC = EntitiesIdentifier(text) # 3 Component
 
-	questionIndex = patternIdC.GetPattern()
-	concepts = conceptIdC.GetConcept()
-	entities = entityIdC.GetEntity()
-	print("question index: " + str(questionIndex))
-	print("concepts: " + str(concepts))
-	print("concepts: " + str(entities))
-	print("entity: " + str(entities[0]))
+	questionIndex = patternIdC.GetPattern() # int number or None
+	concepts = conceptIdC.GetConcept()		# None or [[string key, string value]] or None
+	entities = entityIdC.GetEntity()		# ([string text, string label]) or None
+
+	print("###")
+	print("CONCEPTS:")
+	print(concepts)
+	print("ENTIEIS")
+	print(entities)
+	print("INDEX")
+	print(questionIndex)
+	print("###")
 	# 4 Component. Query Builder
 	queryBuilderC = QueryBuilder(questionIndex,concepts,entities)
 	query = queryBuilderC.GetQuery()
-
-	#
-	print("1 component: " + str(questionIndex))
-	print("2 component: " + str(concepts))
-	print("3 component: " + str(entities))
-	print("4 component: " + str(query))
 	# 5 Component. Query Executor
-	queryExecutorC = QueryExecutor(query) 
-	response = queryExecutorC.ExecuteQuery()
-
-	#
-	return render_template("overpassResult.html", result = response, questionIndex = questionIndex, resultLen = len(response.nodes) ) 
-
+	try:
+		queryExecutorC = QueryExecutor(query) 
+		response = queryExecutorC.ExecuteQuery()
+		return render_template("overpassResult.html", result = response, questionIndex = questionIndex, resultLen = len(response.nodes) ) 
+	except Exception as e:
+		print("#Error inside of Query Executor")
+		print(e)
+		return render_template("index.html")
+		#print message later
+		#use validation as separated component later
 
 
 if __name__ == "__main__":
