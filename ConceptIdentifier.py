@@ -1,71 +1,104 @@
 import spacy
-from numpy import genfromtxt
-import numpy as np
+import io
+import json
+import string
+from spacy.matcher import Matcher
 
 class ConceptIdentifier:
 
 	def __init__(self, text):
 		#private variables
 		self.__sentence = text
-		self.__tourism = genfromtxt('features/tourism.csv', delimiter=';', dtype=None, encoding='utf-8')	
-		self.__amenity = genfromtxt('features/amenity.csv', delimiter=';', dtype=None, encoding='utf-8')	
-		self.__concept = list() # main class variable, that could contain tuple
-		self.Identify()
+		self.__patterns = self.__GetPatterns()
+		self.__nlp = spacy.load("en_core_web_sm", disable=['parser','ner'])
+		self.__matcher = Matcher(self.__nlp.vocab)
+		# Load Patterns
+		self.__LoadPatterns()
+		# Identify
+		self.__concepts = self.Identify()
+
+	def __GetPatterns(self): # Get json data with patterns
+		try:
+			with open('features/patterns.json') as data_file:
+				return json.load(data_file)
+		except:
+			print("#Error. There is no patterns.json file found")
+			return None
+
+
+	def __LoadPatterns(self): # Split json data to Key-Value and load it to the Matcher engine
+		if self.__patterns != None:
+			for item in self.__patterns:
+				pattern = item[1]
+				ID = item[0][0]
+				self.__matcher.add(ID, None, *pattern)
+		else:
+			print("#Error. Patterns cannot be loaded. String is empty ")
 
 	def GetConcept(self):
-		return self.__concept
+		return self.__concepts # None or [[key,value]..]
 
 	def Identify(self):
-		nlp = spacy.load("en_core_web_sm")
-		docx = nlp(self.__sentence) 
-		instClass = None
-		instValue = None
-		instInfo = None
-
-		for chunk in docx.noun_chunks:
-			#1 Check chunks
-			chunkText = chunk.text
-			print("chunk"+chunkText)
-			instClass, instValue, instInfo = self.__NumpyData(chunkText)
-			#2 Check rootText
-			if instClass == None and instValue == None and instInfo == None:
-				rootText = chunk.root.text
-				print("rootText"+rootText)
-				instClass, instValue, instInfo = self.__NumpyData(rootText)
-			#3 Check lemma
-			if instClass == None and instValue == None and instInfo == None:
-				lemma = chunk.lemma_
-				print("lemma"+lemma)
-				instClass, instValue, instInfo = self.__NumpyData(lemma)
+		try:
+			concepts = list()
 			#
-			if instClass != None and instValue != None and instInfo != None:
-				self.__concept.append((instClass,instValue,instInfo))
-		if len(self.__concept) == 0:
-			self.__concept.append((instClass,instValue,instInfo))
-
-
-
-	def __NumpyData(self,word):
-		instClass = None
-		instValue = None
-		instInfo = None	
+			doc = self.__nlp(self.__sentence.lower()) # making text in lower case
+			# matches
+			matches = self.__matcher(doc)
+			for match_id, start, end in matches:
+				string_id = self.__nlp.vocab.strings[match_id]  # Get string representation
+				span = doc[start:end]  # The matched span
+				text = self.__GetClearText(span.text)
+				#
+				docx = self.__nlp(text, disable=['parser','ner'])
+				resultText = docx[0].lemma_ if len(docx) == 1 else str(docx[0].lemma_) + " " + str(docx[1].lemma_)
+				concepts.append([string_id, resultText]) # [key, value]
+			
+			if len(concepts) > 1:
+				concepts = self.__RidOfExcessData(concepts)
+			
+			return concepts if len(concepts) > 0 else None
+		except Exception as e:
+			print("#Error. Something wrong inside of CI.Identify()")
+			print(e)
+			return None
+	
+	def __RidOfExcessData(self, concepts):
+		# define variables
+		text = self.__GetClearText(self.__sentence)
+		tmp = ""
+		# preprocess text
+		for token in self.__nlp(text,disable=['parser','ner']):
+			tmp += token.lemma_ + " "
+		text = tmp
 		#
-		npMask = np.where( (self.__tourism[:,2] == word) )
-		result = self.__tourism[npMask, :]
-		if (len(result[0]) != 0):
-			if word == result[0].item(2):
-				instClass = "tourism"
-				instValue = result[0].item(0)
-				instInfo = result[0].item(1)
-				return (instClass,instValue,instInfo)
-		#
-		npMask = np.where( (self.__amenity[:,2] == word) )
-		secondResult = self.__amenity[npMask, :]
-		if (len(secondResult[0]) != 0):
-			if word == secondResult[0].item(2):
-				instClass = "amenity"
-				instValue = secondResult[0].item(0)
-				instInfo = secondResult[0].item(1)
-				return (instClass,instValue,instInfo)
-		#
-		return (instClass,instValue,instInfo)
+
+		concept_list = concepts
+		new_concept_list = []
+		kol = 0
+		# sort
+		concept_list.sort(key=lambda x:len(x[1]), reverse=True)
+		# get concepts
+		for item in concept_list:
+			# get first concept
+			if kol == 0:
+				if item[1] in text: 
+					new_concept_list.append(item)
+					kol = 1
+					text = text.replace(item[1],"",1)
+					continue
+			# get second concept
+			if kol == 1:
+				if item[1] in text:
+					new_concept_list.append(item)
+					kol = 2
+					text = text.replace(item[1],"",1)
+					break
+		return new_concept_list
+
+	def __GetClearText(self, arg_text):
+		translator = str.maketrans(string.punctuation, ' '*len(string.punctuation))
+		text = arg_text.lower().translate(translator)
+		text = text.replace("  ", " ") if "  " in text else text
+		text = ' '.join(text.split())
+		return text
