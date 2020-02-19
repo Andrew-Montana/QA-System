@@ -20,27 +20,25 @@ def send():
 	if request.method == 'POST':
 		text = request.form['search'] # text
 
-	conceptIdC = ConceptIdentifier(text) # 1 Component
-	entityIdC = EntitiesIdentifier(text) # 2 Component
+	patternIdC = PatternIdentifier(text) # 1 Component
+	conceptIdC = ConceptIdentifier(text) # 2 Component
+	entityIdC = EntitiesIdentifier(text) # 3 Component
 
-	concepts = conceptIdC.GetConcept()		# [[string key, string value]] or None
-	entities = entityIdC.GetEntity()		# [[string label, string text]] or None
+	questionIndex = patternIdC.GetPattern() # int number or None
+	concepts = conceptIdC.GetConcept()		# None or [[string key, string value]] or None
+	entities = entityIdC.GetEntity()		# ([string text, string label]) or None
 
-	numEnts = len(entities) if entities is not None else 0
-	numConcepts = len(concepts) if concepts is not None else 0
-	startConceptIndex = conceptIdC.GetStartIndex()
-
-	# 3 Component
-	patternId = PatternIdentifier(text, numEnts, numConcepts, startConceptIndex)
-	questionIndex = patternId.GetPattern() # string or None
-
+	print("###")
+	print("CONCEPTS:")
+	print(concepts)
+	print("ENTIEIS")
+	print(entities)
+	print("INDEX")
+	print(questionIndex)
+	print("###")
 	# 4 Component. Query Builder
 	queryBuilderC = QueryBuilder(questionIndex,concepts,entities)
 	query = queryBuilderC.GetQuery()
-
-	print(concepts)
-	print(questionIndex)
-	print(query)
 	# 5 Component. Query Executor
 	try:
 		queryExecutorC = QueryExecutor(query) 

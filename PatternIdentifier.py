@@ -3,7 +3,7 @@ from spacy.matcher import Matcher
 
 class PatternIdentifier:
 
-	def __init__(self, text, numEnts, numConcepts, startConceptIndex):
+	def __init__(self, text, numEnts, numConcepts):
 		self.__nlp = spacy.load("en_core_web_sm", disable=['parser','ner'])
 		self.__text = text.lower()
 		self.__matcher = Matcher(self.__nlp.vocab)
@@ -11,7 +11,6 @@ class PatternIdentifier:
 		
 		self.__ents = numEnts
 		self.__concepts = numConcepts
-		self.__startConceptIndex = startConceptIndex
 
 	def GetPattern(self):
 		doc = self.__nlp(self.__text)
@@ -31,33 +30,21 @@ class PatternIdentifier:
 			if pattern == "PS1":
 				if self.__ents == 0 and self.__concepts == 1:
 					result = "PS1"
-				elif self.__ents == 1 and self.__concepts == 0:
-					result = "PS1_2"
 			elif pattern == "PS2" and result == None:
-				#if self.__ents == 0 and self.__concepts == 2:
-				#	result = "PS2_1"
-				if self.__ents == 1 and self.__concepts == 1:
+				if self.__ents == 0 and self.__concepts == 2:
+					result = "PS2_1"
+				elif self.__ents == 1 and self.__concepts == 1:
 					result = "PS2_2"
 			elif pattern == "PA" and result == None:
-				#if self.__ents == 0 and self.__concepts == 1:
-				#	result = "PA_1"
-				if self.__ents == 1 and self.__concepts == 0:
+				if self.__ents == 0 and self.__concepts == 1:
+					result = "PA_1"
+				elif self.__ents == 1 and self.__concepts == 0:
 					result = "PA_2"
 			elif pattern == "POH" and result == None:
-				#if self.__ents == 0 and self.__concepts == 1:
-				#	result = "POH_1"
-				if self.__ents == 1 and self.__concepts == 0:
+				if self.__ents == 0 and self.__concepts == 1:
+					result = "POH_1"
+				elif self.__ents == 1 and self.__concepts == 0:
 					result = "POH_2"
-
-		# if no patterns found
-		if result == None:
-			if self.__concepts == 1 and self.__ents == 0:
-				if self.__startConceptIndex == 0:
-					return "PC"
-			elif self.__concepts == 1 and self.__ents == 1:
-				if self.__startConceptIndex == 0:
-					return "PCE"	
-
 		return result
 	
 	def __LoadMatcherPatterns(self):
