@@ -8,6 +8,8 @@ class ConceptIdentifier:
 
 	def __init__(self, text):
 		#private variables
+		self.__start = None
+
 		self.__sentence = text
 		self.__patterns = self.__GetPatterns()
 		self.__nlp = spacy.load("en_core_web_sm", disable=['parser','ner'])
@@ -16,6 +18,9 @@ class ConceptIdentifier:
 		self.__LoadPatterns()
 		# Identify
 		self.__concepts = self.Identify()
+
+	def GetStartIndex(self):
+		return self.__start
 
 	def __GetPatterns(self): # Get json data with patterns
 		try:
@@ -48,6 +53,7 @@ class ConceptIdentifier:
 			for match_id, start, end in matches:
 				string_id = self.__nlp.vocab.strings[match_id]  # Get string representation
 				span = doc[start:end]  # The matched span
+				self.__start = start # for further use in PI component
 				text = self.__GetClearText(span.text)
 				#
 				docx = self.__nlp(text, disable=['parser','ner'])
@@ -56,6 +62,9 @@ class ConceptIdentifier:
 			
 			if len(concepts) > 1:
 				concepts = self.__RidOfExcessData(concepts)
+
+			for word in concepts:
+				word[1] = word[1].replace(" ","_") # i.e. parking space become parking_space (it's for overpass)
 			
 			return concepts if len(concepts) > 0 else None
 		except Exception as e:
